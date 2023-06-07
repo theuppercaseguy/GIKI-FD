@@ -9,7 +9,6 @@ import * as ImagePicker from 'expo-image-picker';
 
 const AdminScreen = () => {
   const navigation = useNavigation();
-  const [activeTab, setActiveTab] = useState('uploadFood'); // State to keep track of active tab
 
 
   const [FoodId, setFoodId] = useState('');
@@ -20,7 +19,7 @@ const AdminScreen = () => {
   const [foodIsActive, setFoodIsActive] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('KFC');
   const categories = ['KFC', 'McDonalds', 'DD', 'Layers'];
   const [dropdownVisible, setDropdownVisible] = useState(false); // State to toggle dropdown visibility
   const [selectedImage, setSelectedImage] = useState(null);
@@ -28,6 +27,12 @@ const AdminScreen = () => {
   const [isUploading, setisUploading] = useState(false);
   const [isFormFilled, setIsFormFilled] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('uploadFood'); // State to keep track of active tab
+  const [activeCatTab, setActiveCatTab] = useState('KFC'); // State to keep track of active tab
+  const [FoodItems, setFoodItems] = useState([]); // State to keep track of active tab
+  let filteredFoodItems = [];
+
 
   const checkFormValidity = () => {
     if (FoodName && FoodPrice && FoodId && foodIsActive && selectedCategory && selectedImage) {
@@ -37,8 +42,35 @@ const AdminScreen = () => {
     }
   };
 
+  const fetchFoodItems = async (cat) => {
+    setIsLoading(true);
+    try {
+      const foodItemsRef = collection(db, cat);
+
+      const querySnapshot = await getDocs(foodItemsRef);
+      // console.log("FI0: ",querySnapshot);
+
+
+      let foodItemsretreived = querySnapshot.docs.map((doc) => doc.data());
+      foodItemsretreived.forEach((item) => {
+        filteredFoodItems.push(item);
+      });
+
+      setFoodItems(foodItemsretreived);
+
+      console.log("Food items recived", FoodItems);
+
+    } catch (error) {
+      console.log('Error fetching food items:', error);
+    }
+    setIsLoading(false);
+  };
+
   useEffect(() => {
     checkFormValidity();
+    fetchFoodItems(selectedCategory);
+    // setActiveCatTab('KFC');
+
   }, [FoodName, FoodPrice, FoodId, foodIsActive, selectedCategory, selectedImage]);
 
   const handleFoodIsActiveChange = (value) => {
@@ -195,6 +227,31 @@ const AdminScreen = () => {
     }
   };
 
+  // food editing 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedFields, setEditedFields] = useState({});
+
+  const handleEdit = () => {
+    setEditedFields({
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      id: item.id,
+      isActive: item.isActive,
+    });
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    // Save the edited fields
+    // Replace the item with the updated fields
+    // Save the updated foodItems array
+    setIsEditing(false);
+  };
+
+  // Filter the food items based on the selected category
+
+
 
   return (
     <View style={styles.container}>
@@ -215,7 +272,7 @@ const AdminScreen = () => {
 
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'activeFoodItems' && styles.activeTabButtonTop]}
-          onPress={() => setActiveTab('activeFoodItems')}
+          onPress={() => { setActiveTab('activeFoodItems'); fetchFoodItems(); }}
         >
           <Text style={styles.tabButtonText}>Active Food Items</Text>
         </TouchableOpacity>
@@ -320,11 +377,161 @@ const AdminScreen = () => {
         </ScrollView>
       ) : (
         <ScrollView style={styles.content}>
+
           {/* Render active food items */}
-        </ScrollView>
+          <View>
+            {/* Category buttons */}
+            <View style={styles.categoryBar}>
+              {/* Category buttons */}
+              <TouchableOpacity
+                style={[
+                  styles.categoryButton,
+                  selectedCategory === 'KFC' ? styles.selectedCategoryButton : null,
+                ]}
+                onPress={() => setSelectedCategory('KFC')}
+              >
+                <Text style={styles.categoryButtonText}>KFC</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.categoryButton,
+                  selectedCategory === 'McDonalds' ? styles.selectedCategoryButton : null,
+                ]}
+                onPress={() => setSelectedCategory('McDonalds')}
+              >
+                <Text style={styles.categoryButtonText}>McDonalds</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.categoryButton,
+                  selectedCategory === 'DD' ? styles.selectedCategoryButton : null,
+                ]}
+                onPress={() => setSelectedCategory('DD')}
+              >
+                <Text style={styles.categoryButtonText}>DD</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.categoryButton,
+                  selectedCategory === 'Layers' ? styles.selectedCategoryButton : null,
+                ]}
+                onPress={() => setSelectedCategory('Layers')}
+              >
+                <Text style={styles.categoryButtonText}>Layers</Text>
+              </TouchableOpacity>
+              {/* Add more category buttons as needed */}
+            </View>
+
+            {isLoading ? (
+              <Text>Loading...</Text>
+            ) : (
+
+              <>
+                {FoodItems.length === 0 ? (
+                  <Text>No items</Text>
+                ) : (
+
+                  <ScrollView style={styles.content}>
+                    {FoodItems.map((FoodItem) => (
+                      <View key={FoodItem.Name} style={styles.foodItemContainer}>
+
+                        {/* Render food item details */}
+                        {isEditing ? (
+                          <View>
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Food Name"
+                              onChangeText={(text) => setEditedFields({ ...editedFields, name: text })}
+                              value={editedFields.name}
+                            />
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Description"
+                              onChangeText={(text) => setEditedFields({ ...editedFields, description: text })}
+                              value={editedFields.description}
+                            />
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Price"
+                              onChangeText={(text) => setEditedFields({ ...editedFields, price: text })}
+                              value={editedFields.price}
+                              keyboardType="numeric"
+                            />
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Unique ID"
+                              onChangeText={(text) => setEditedFields({ ...editedFields, id: text })}
+                              value={editedFields.id}
+                            />
+                            <TouchableOpacity
+                              style={styles.dropdownContainer}
+                              onPress={() => setEditedFields({ ...editedFields, isActive: !editedFields.isActive })}
+                            >
+                              <Text>{editedFields.isActive ? 'Active' : 'Inactive'}</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={styles.saveButton}
+                              onPress={handleSave}
+                              disabled={isSaving}
+                            >
+                              <Text style={styles.saveButtonText}>Save</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <View>
+                            {FoodItem.imageUri ? (
+                              <Image source={{ uri: FoodItem.imageUri }} style={styles.foodItemImage} />
+                            ) : (
+                              <View style={styles.emptyFoodItemImage}>
+                                <Text style={styles.emptyFoodItemImageText}>No Image</Text>
+                              </View>
+                            )}
+                            <View style={styles.foodItemDetailsContainer}>
+                              <View style={styles.foodItemRow}>
+                                {/* <Text >Name:</Text> */}
+                                <Text style={styles.foodItemName}>{FoodItem.Name}</Text>
+                                <Text >RS: </Text>
+                                <Text style={styles.foodItemPrice}>{FoodItem.Price}\-</Text>
+                              </View>
+                              <Text style={styles.foodItemDescription}>{FoodItem.Description}</Text>
+                              <View style={styles.foodItemRow}>
+                                <Text>ID: </Text>
+                                <Text style={styles.foodItemId}> {FoodItem.id}</Text>
+                                <Text >Priority: </Text>
+                                <Text style={styles.foodItemPriority}>{FoodItem.Priority}</Text>
+                              </View>
+                              <View style={styles.foodItemRow}>
+                                <Text >Status: </Text>
+                                <Text style={styles.foodItemIsActive}>{FoodItem.isActive ? 'Active' : 'Inactive'}</Text>
+                                <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+                                  <Text style={styles.editButtonText}>Edit</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.deleteButton} >
+                                  <Text style={styles.deleteButtonText}>Delete</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          </View>
+                        )}
+
+                      </View>
+
+                    ))}
+                  </ScrollView>
+
+                )}
+              </>
+            )}
+
+          </View>
+
+        </ScrollView >
+
       )}
 
       <View style={styles.bottomBar}>
+
         <TouchableOpacity
           style={[
             styles.bottomBarButton,
@@ -346,14 +553,147 @@ const AdminScreen = () => {
         </TouchableOpacity>
       </View>
 
-    </View>
+    </View >
   );
 };
 
 const styles = StyleSheet.create({
+  categoryBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#f9f9f9',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    marginBottom:20,
+  },
+  categoryButton: {
+    padding: 10,
+    borderRadius: 5,
+  },
+  selectedCategoryButton: {
+    backgroundColor: 'lightblue',
+  },
+  categoryButtonText: {
+    color: '#000',
+  },
+
+
+  foodItemLabel: {
+    // fontWeight: 'bold',
+    // fontSize: 12,
+    // marginBottom: 5,
+  },
+  foodItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    // marginTop:10,
+  },
+
+  foodItemDetailsContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#f9f9f9',
+    marginBottom: 10,
+  },
+  foodItemImage: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+    marginBottom: 10,
+  },
+  emptyFoodItemImage: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+    backgroundColor: '#ccc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  emptyFoodItemImageText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  foodItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  foodItemName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 10,
+  },
+  foodItemPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  foodItemDescription: {
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  foodItemId: {
+    fontSize: 16,
+    flex: 1,
+    fontWeight: 'bold',
+    marginRight: 10,
+  },
+  foodItemPriority: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  foodItemIsActive: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 10,
+  },
+  editButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: 'blue',
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  deleteButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: 'red',
+    borderRadius: 5,
+  },
+  editButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+
+
+
+  content: {
+    flex: 1,
+    width: '100%',
+  },
+
+
+
+
+
+
   container: {
     flex: 1,
     // paddingTop:25,
+
   },
   optionText: {
     fontSize: 16,
@@ -422,7 +762,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: -1, // Adjust the margin to bring the tabs up
     zIndex: 2,// Overlap the bottom bar
-    marginBottom:5,
+    marginBottom: 5,
   },
   tabButton: {
     flex: 1,
@@ -433,7 +773,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#ccc',
   },
   activeTabButtonTop: {
-    borderBottomWidth:2,
+    borderBottomWidth: 2,
     borderBottomColor: 'blue',
   },
   activeTabButton: {
