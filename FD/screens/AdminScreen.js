@@ -2,8 +2,8 @@ import { useNavigation } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
 import { ScrollView, Image, StyleSheet, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { fbauth, auth, db, storage } from '../firebaseauth';
-import { ref, uploadBytesResumable } from 'firebase/storage';
-import { collection, getDocs, deleteDoc, addDoc, query, where } from 'firebase/firestore';
+import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
+import { collection, getDocs, doc, deleteDoc, addDoc, query, where } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 
 
@@ -27,10 +27,12 @@ const AdminScreen = () => {
   const [isUploading, setisUploading] = useState(false);
   const [isFormFilled, setIsFormFilled] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('uploadFood'); // State to keep track of active tab
   const [activeCatTab, setActiveCatTab] = useState('KFC'); // State to keep track of active tab
   const [FoodItems, setFoodItems] = useState([]); // State to keep track of active tab
+
   let filteredFoodItems = [];
 
 
@@ -43,6 +45,11 @@ const AdminScreen = () => {
   };
 
   const fetchFoodItems = async (cat) => {
+    if (!cat) {
+      console.log('Invalid category');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const foodItemsRef = collection(db, cat);
@@ -58,7 +65,7 @@ const AdminScreen = () => {
 
       setFoodItems(foodItemsretreived);
 
-      console.log("Food items recived", FoodItems);
+      console.log("Food items recived: ", FoodItems.length);
 
     } catch (error) {
       console.log('Error fetching food items:', error);
@@ -230,12 +237,56 @@ const AdminScreen = () => {
   // food editing 
   const [isEditing, setIsEditing] = useState(false);
   const [editedFields, setEditedFields] = useState({});
+  const [isDeleting, setisDeleting] = useState(false); // State to keep track of active tab
+
+  const handleDeleteFooditem = async (name) => {
+    let completed = false;
+    try {
+      setisDeleting(true); // Set isDeleting to true
+      // Query for the document with the matching name
+      const querySnapshot = await getDocs(
+        query(collection(db, selectedCategory), where("Name", "==", name))
+      );
+
+      if (!querySnapshot.empty) {
+        // Delete the document from Firestore
+        await deleteDoc(doc(db, selectedCategory, querySnapshot.docs[0].id));
+        completed = true
+        // Delete the image from storage
+        const storageRef = ref(
+          storage,
+          `Images/${selectedCategory}/${name}`
+        );
+        await deleteObject(storageRef);
+
+        completed = true
+        setSuccessMessage('Food item deleted successfully');
+        setErrorMessage(null);
+
+        console.log("Successfully deleted");
+        fetchFoodItems(selectedCategory);
+      } else {
+        completed = false;
+        setErrorMessage('Food item not found');
+        setSuccessMessage(null);
+      }
+    } catch (error) {
+      if (!completed) {
+        setErrorMessage('Error deleting food item');
+        setSuccessMessage(null);
+      }
+      console.log('Error deleting food item:', error);
+    } finally {
+      setisDeleting(false); // Set isDeleting back to false
+    }
+  }
+
 
   const handleEdit = () => {
     setEditedFields({
-      name: item.name,
-      description: item.description,
-      price: item.price,
+      Name: item.name,
+      Description: item.description,
+      Price: item.price,
       id: item.id,
       isActive: item.isActive,
     });
@@ -432,6 +483,9 @@ const AdminScreen = () => {
                 ) : (
 
                   <ScrollView style={styles.content}>
+                    {errorMessage && <Text style={styles.errorMessage}>{errorMessage}</Text>}
+                    {successMessage && <Text style={styles.successMessage}>{successMessage}</Text>}
+
                     {FoodItems.map((FoodItem) => (
                       <View key={FoodItem.Name} style={styles.foodItemContainer}>
 
@@ -480,8 +534,8 @@ const AdminScreen = () => {
                           </View>
                         ) : (
                           <View>
-                            {FoodItem.imageUri ? (
-                              <Image source={{ uri: FoodItem.imageUri }} style={styles.foodItemImage} />
+                            {FoodItem.ImagePath ? (
+                              <Image source={{ uri: null }} style={styles.foodItemImage} />
                             ) : (
                               <View style={styles.emptyFoodItemImage}>
                                 <Text style={styles.emptyFoodItemImageText}>No Image</Text>
@@ -507,8 +561,16 @@ const AdminScreen = () => {
                                 <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
                                   <Text style={styles.editButtonText}>Edit</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={styles.deleteButton} >
-                                  <Text style={styles.deleteButtonText}>Delete</Text>
+                                <TouchableOpacity
+                                  style={styles.deleteButton}
+                                  onPress={() => handleDeleteFooditem(FoodItem.Name)}
+                                  disabled={isDeleting} // Disable the delete button when isDeleting is true
+                                >
+                                  {isDeleting ? (
+                                    <Text style={styles.deleteButtonText}>Deleting...</Text>
+                                  ) : (
+                                    <Text style={styles.deleteButtonText}>Delete</Text>
+                                  )}
                                 </TouchableOpacity>
                               </View>
                             </View>
@@ -567,7 +629,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
-    marginBottom:20,
+    marginBottom: 20,
   },
   categoryButton: {
     padding: 10,
@@ -592,6 +654,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 20,
     // marginTop:10,
+
+    borderWidth: 2,
+    borderColor: "lightgrey",
+    borderRadius: 4,
+
   },
 
   foodItemDetailsContainer: {
@@ -600,13 +667,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: '#f9f9f9',
     marginBottom: 10,
+    // borderRadius:20,
   },
   foodItemImage: {
     width: '100%',
     aspectRatio: 4 / 3,
     marginBottom: 10,
+
   },
   emptyFoodItemImage: {
+    borderRadius: 20,
+    borderWidth: 20,
+    borderColor: "black",
     width: '100%',
     aspectRatio: 4 / 3,
     backgroundColor: '#ccc',
@@ -677,7 +749,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-
 
 
   content: {
@@ -787,6 +858,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     backgroundColor: '#f6f6f6',
+  },
+  successMessage: {
+    color: 'green',
+    fontSize: 16,
+    marginTop: 10,
   },
   uploadImageContainer: {
     borderWidth: 1,
