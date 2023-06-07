@@ -76,7 +76,6 @@ const AdminScreen = () => {
 
       if (!result.cancelled) {
         const source = { uri: result.uri };
-        console.log("source: ", source);
         setSelectedImage(source);
       }
     } catch (error) {
@@ -119,16 +118,10 @@ const AdminScreen = () => {
 
   const UploadFoodItemData = async () => {
     let completed = false;
-    console.log("SC: ", selectedCategory, FoodName);
     try {
       setisUploading(true);
       const foodRef = collection(db, selectedCategory);
       const querySnapshot = await getDocs(query(foodRef, where('Name', '==', FoodName)));
-
-      console.log("Query results:");
-      querySnapshot.forEach((doc) => {
-        console.log("Name:", doc.data().Name);
-      });
 
       if (!querySnapshot.empty) {
         setErrorMessage('An item with the same name already exists.');
@@ -147,8 +140,7 @@ const AdminScreen = () => {
 
       // Retrieve the auto-generated document ID
       const newDocumentId = docRef.id;
-      console.log("ID: ", newDocumentId);
-
+      console.log("Doc ID: ", newDocumentId);
 
       setisUploading(false);
       setErrorMessage('');
@@ -204,12 +196,8 @@ const AdminScreen = () => {
   };
   
 
-
-
-
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.container}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
           <Text style={styles.buttonText}>Sign Out</Text>
@@ -235,110 +223,72 @@ const AdminScreen = () => {
 
       {/* Render content based on active tab */}
       {activeTab === 'uploadFood' ? (
-        <View style={styles.content}>
+        <ScrollView style={styles.content}>
+          <TouchableOpacity style={styles.uploadImageContainer} onPress={PickImage}>
+            {selectedImage ? (
+              <Image source={{ uri: selectedImage.uri }} style={styles.uploadedImage} />
+            ) : (
+              <Text>Upload Image...</Text>
+            )}
+          </TouchableOpacity>
 
-          <ScrollView style={styles.scrollContent}>
+          <TextInput
+            style={styles.input}
+            placeholder="Food Name"
+            onChangeText={(text) => setFoodName(text)}
+            value={FoodName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Description"
+            onChangeText={(text) => setFoodDescription(text)}
+            value={FoodDescription}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Unique ID"
+            onChangeText={(text) => setFoodId(text)}
+            value={FoodId}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Price"
+            onChangeText={(text) => setFoodPrice(text)}
+            value={FoodPrice}
+            keyboardType="numeric"
+          />
 
-            <TouchableOpacity style={styles.uploadImageContainer} onPress={PickImage}>
-              {selectedImage ? (
-                <Image source={{ uri: selectedImage.uri }} style={styles.uploadedImage} />
-              ) : (
-                <Text>Upload Image...</Text>
-              )}
-            </TouchableOpacity>
+          <TouchableOpacity style={styles.dropdownContainer} onPress={toggleModal}>
+            <Text>{foodIsActive || 'Select IsActive...'}</Text>
+          </TouchableOpacity>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Food Name"
-              onChangeText={(text) => setFoodName(text)}
-              value={FoodName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Description"
-              onChangeText={(text) => setFoodDescription(text)}
-              value={FoodDescription}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Unique ID"
-              onChangeText={(text) => setFoodId(text)}
-              value={FoodId}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Price"
-              onChangeText={(text) => setFoodPrice(text)}
-              value={FoodPrice}
-              keyboardType="numeric"
-            />
-            <TouchableOpacity style={styles.dropdownContainer} onPress={toggleModal}>
-              <Text>{foodIsActive || 'Select IsActive...'}</Text>
-            </TouchableOpacity>
-
-            {/* IsACtive selection */}
-            <Modal visible={isModalVisible} animationType="slide" transparent>
-              <View style={styles.modalContainer}>
-                <View style={styles.dropdownModal}>
-                  <TouchableOpacity
-                    style={styles.dropdownItem}
-                    onPress={() => handleFoodIsActiveChange('true')}
-                  >
-                    <Text style={styles.optionText}>True</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.dropdownItem}
-                    onPress={() => handleFoodIsActiveChange('false')}
-                  >
-                    <Text style={styles.optionText}>False</Text>
-                  </TouchableOpacity>
-                </View>
+          {/* IsActive selection */}
+          <Modal visible={isModalVisible} animationType="slide" transparent>
+            <View style={styles.modalContainer}>
+              <View style={styles.dropdownModal}>
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => handleFoodIsActiveChange('true')}
+                >
+                  <Text style={styles.optionText}>True</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => handleFoodIsActiveChange('false')}
+                >
+                  <Text style={styles.optionText}>False</Text>
+                </TouchableOpacity>
               </View>
-            </Modal>
+            </View>
+          </Modal>
 
-            {/* category selection */}
-            <TouchableOpacity
-              style={styles.dropdownContainer}
-              onPress={() => setDropdownVisible(true)}
-            >
-              <Text>{selectedCategory || 'Select a category'}</Text>
-            </TouchableOpacity>
-
-            <Modal visible={dropdownVisible} animationType="fade" transparent>
-              <View style={styles.modalContainer}>
-                <View style={styles.dropdownModal}>
-                  {categories.map((category) => (
-                    <TouchableOpacity
-                      key={category}
-                      style={styles.dropdownItem}
-                      onPress={() => handleCategorySelect(category)}
-                    >
-                      <Text>{category}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </Modal>
-
-            <TouchableOpacity
-              style={[styles.uploadButton, !isFormFilled || isUploading ? styles.disabledButton : null]}
-              onPress={handleUploadFoodItem}
-              disabled={!isFormFilled || isUploading}
-            >
-              <Text style={styles.uploadButtonText}>
-                {isUploading ? 'UpLoading...' : 'Upload'}
-              </Text>
-            </TouchableOpacity>
-
-
-            {errorMessage ? <Text style={styles.errorMessage}>{errorMessage}</Text> : null}
-
-
-          </ScrollView>
-        </View>
-      ) : (
-        <View style={styles.content}>
-          {/* Render active food items */}
+          {/* Category selection */}
+          <TouchableOpacity
+            style={styles.dropdownContainer}
+            onPress={() => setDropdownVisible(true)}
+          >
+            <Text>{selectedCategory || 'Select a category'}</Text>
+          </TouchableOpacity>
 
           <Modal visible={dropdownVisible} animationType="fade" transparent>
             <View style={styles.modalContainer}>
@@ -356,39 +306,53 @@ const AdminScreen = () => {
             </View>
           </Modal>
 
-        </View>
+          <TouchableOpacity
+            style={[styles.uploadButton, !isFormFilled || isUploading ? styles.disabledButton : null]}
+            onPress={handleUploadFoodItem}
+            disabled={!isFormFilled || isUploading}
+          >
+            <Text style={styles.uploadButtonText}>
+              {isUploading ? 'Uploading...' : 'Upload'}
+            </Text>
+          </TouchableOpacity>
+
+          {errorMessage ? <Text style={styles.errorMessage}>{errorMessage}</Text> : null}
+        </ScrollView>
+      ) : (
+        <ScrollView style={styles.content}>
+          {/* Render active food items */}
+        </ScrollView>
       )}
 
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          style={[styles.bottomBarButton, activeTab === 'ordered-Food' && styles.activeTabButton]}
+          style={[
+            styles.bottomBarButton,
+            activeTab === 'ordered-Food' && styles.activeTabButton,
+          ]}
           onPress={() => setActiveTab('ordered-Food')}
         >
           <Text style={styles.bottomBarButtonText}>Ordered Food</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.bottomBarButton, activeTab === 'Order-details' && styles.activeTabButton]}
+          style={[
+            styles.bottomBarButton,
+            activeTab === 'Order-details' && styles.activeTabButton,
+          ]}
           onPress={() => setActiveTab('Order-details')}
         >
-          <Text style={styles.bottomBarButtonText}>Orders-details</Text>
+          <Text style={styles.bottomBarButtonText}>Orders Details</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </View>
   );
-
-
-
 };
-
-export default AdminScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 100, // To provide space for the bottom bar
+    flex: 1,
+    // paddingTop:25,
   },
   optionText: {
     fontSize: 16,
@@ -410,144 +374,128 @@ const styles = StyleSheet.create({
   dropdownItem: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    // textAlign:"center"
+    justifyContent: 'center',
+    alignItems: 'center',
     borderColor: 'grey',
     borderWidth: 1,
     borderRadius: 5,
-
+    marginBottom: 5,
   },
-  errorMessage: {
-    color: 'red',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-  },
-  disabledButton: {
-    backgroundColor: '#ccc',
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    // paddingBottom:25,
   },
   topBar: {
-    paddingTop: 35,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#f9f9f9',
-
+    paddingTop:40,
+    backgroundColor: '#fffffff',
+    alignItems: 'center',
+  },
+  signOutButton: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    backgroundColor: 'red',
+  },
+  buttonText: {
+    color: 'white',
   },
   adminText: {
     fontSize: 18,
     fontWeight: 'bold',
   },
-  signOutButton: {
-    backgroundColor: '#0782F9',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: '700',
-    fontSize: 16,
-  },
   tabButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    marginVertical: 10,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 8,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 10,
     borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderBottomColor: '#ccc',
   },
   activeTabButton: {
-    borderBottomColor: '#0782F9',
+    borderBottomColor: 'blue',
   },
   tabButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#555',
   },
   content: {
     flex: 1,
-    width: '100%',
-    padding: 20,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-    backgroundColor: '#f9f9f9',
-  },
-  bottomBarButton: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  bottomBarButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#555',
-  },
-  input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 10,
-    paddingHorizontal: 10,
-    width: '100%',
+    backgroundColor: '#f6f6f6',
   },
   uploadImageContainer: {
-    borderColor: 'gray',
     borderWidth: 1,
+    borderColor: '#ccc',
+    borderStyle: 'dashed',
     borderRadius: 5,
-    // height: 150,
-    marginBottom: 10,
+    height: 200,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 10,
+    marginBottom: 20,
   },
   uploadedImage: {
     width: '100%',
-    height: 200,
-    resizeMode: 'contain',
+    height: '100%',
+  },
+  input: {
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginBottom: 10,
   },
   uploadButton: {
-    backgroundColor: '#0782F9',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    marginBottom: 10,
-    width: '100%',
+    backgroundColor: 'blue',
+    borderRadius: 5,
+    paddingVertical: 10,
     alignItems: 'center',
+    marginTop: 20,
   },
   uploadButtonText: {
-    color: 'white',
-    fontWeight: '700',
+    color: '#fff',
+    fontSize: 16,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  errorMessage: {
+    color: 'red',
+    marginTop: 10,
+  },
+  bottomBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+  },
+  bottomBarButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: 2,
+    borderTopColor: '#ccc',
+  },
+  bottomBarButtonText: {
     fontSize: 16,
   },
 });
+
+
+
+
+export default AdminScreen;
