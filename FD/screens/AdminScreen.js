@@ -159,22 +159,22 @@ const AdminScreen = () => {
   const handleUploadFoodItem = async () => {
     let imageUploaded = false;
     let dataUploaded = false;
-  
+
     if (isFormFilled) {
       setisUploading(true);
-  
+
       try {
         dataUploaded = await UploadFoodItemData();
-  
+
         if (dataUploaded) {
           imageUploaded = await UploadImage();
         }
-  
+
         if (!dataUploaded || !imageUploaded) {
           if (dataUploaded && !imageUploaded) {
             const foodRef = collection(db, selectedCategory);
             const querySnapshot = await getDocs(query(foodRef, where('Name', '==', FoodName)));
-  
+
             if (!querySnapshot.empty) {
               const docId = querySnapshot.docs[0].id;
               await deleteDoc(doc(foodRef, docId));
@@ -184,17 +184,17 @@ const AdminScreen = () => {
           setisUploading(false);
           return;
         }
-  
+
         alert('Successfully uploaded Food ITEM');
       } catch (error) {
         console.log('Error uploading:', error);
         setErrorMessage('Error uploading. Please try again.');
       }
-  
+
       setisUploading(false);
     }
   };
-  
+
 
   return (
     <View style={styles.container}>
@@ -207,14 +207,14 @@ const AdminScreen = () => {
 
       <View style={styles.tabButtons}>
         <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'uploadFood' && styles.activeTabButton]}
+          style={[styles.tabButton, activeTab === 'uploadFood' && styles.activeTabButtonTop]}
           onPress={() => setActiveTab('uploadFood')}
         >
           <Text style={styles.tabButtonText}>Upload Food Item</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tabButton, activeTab === 'activeFoodItems' && styles.activeTabButton]}
+          style={[styles.tabButton, activeTab === 'activeFoodItems' && styles.activeTabButtonTop]}
           onPress={() => setActiveTab('activeFoodItems')}
         >
           <Text style={styles.tabButtonText}>Active Food Items</Text>
@@ -345,6 +345,7 @@ const AdminScreen = () => {
           <Text style={styles.bottomBarButtonText}>Orders Details</Text>
         </TouchableOpacity>
       </View>
+
     </View>
   );
 };
@@ -388,15 +389,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     // paddingBottom:25,
   },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    paddingTop:40,
-    backgroundColor: '#fffffff',
-    alignItems: 'center',
-  },
   signOutButton: {
     paddingVertical: 5,
     paddingHorizontal: 10,
@@ -410,10 +402,27 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  topBar: {
+    paddingTop: 35,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#f9f9f9',
+    borderBottomWidth: 1,
+    // borderBottomColor: 'blue',// Add a blue line under the top bar
+  },
+
   tabButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 10,
+    // alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: -1, // Adjust the margin to bring the tabs up
+    zIndex: 2,// Overlap the bottom bar
+    marginBottom:5,
   },
   tabButton: {
     flex: 1,
@@ -423,8 +432,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: '#ccc',
   },
-  activeTabButton: {
+  activeTabButtonTop: {
+    borderBottomWidth:2,
     borderBottomColor: 'blue',
+  },
+  activeTabButton: {
+    borderTopWidth: 2,
+    borderTopColor: 'blue',
   },
   tabButtonText: {
     fontSize: 16,
