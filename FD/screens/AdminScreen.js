@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { ScrollView, Image, StyleSheet, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { fbauth, auth, db, storage } from '../firebaseauth';
 import { ref, uploadBytesResumable } from 'firebase/storage';
+import { collection, getDocs, deleteDoc, addDoc, query, where } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 
 
@@ -85,7 +86,7 @@ const AdminScreen = () => {
   };
 
   const UploadImage = async () => {
-
+    let completed = false;
     // setisUploading(true);
     const response = await fetch(selectedImage.uri);
     const blob = await response.blob();
@@ -105,97 +106,103 @@ const AdminScreen = () => {
         throw new Error("Image size exceeds 2MB limit.");
         // setErrorMessage("Image size exceeds 2MB limit.");
       }
-
+      completed = true;
       setSelectedImage(null);
     } catch (error) {
       console.log("Error uploading image: ", error);
       setErrorMessage("Failed to upload photo.");
+      completed = false;
     }
+    return completed;
   };
 
 
   const UploadFoodItemData = async () => {
+    let completed = false;
+    console.log("SC: ", selectedCategory, FoodName);
     try {
-      setLoading(true);
-      // Check if the food name already exists
-      const foodRef = firebase.firestore().collection(selectedCategory);
-      const querySnapshot = await foodRef.where('Name', '==', FoodName).get();
+      setisUploading(true);
+      const foodRef = collection(db, selectedCategory);
+      const querySnapshot = await getDocs(query(foodRef, where('Name', '==', FoodName)));
 
-      console.log("name: ",querySnapshot);
+      console.log("Query results:");
+      querySnapshot.forEach((doc) => {
+        console.log("Name:", doc.data().Name);
+      });
 
       if (!querySnapshot.empty) {
-        setError('An item with the same name already exists.');
-        setLoading(false);
+        setErrorMessage('An item with the same name already exists.');
+        setisUploading(false);
         return;
       }
-
-      // Upload the data to Firestore
-      const docRef = await foodRef.add({
+      const docRef = await addDoc(foodRef, {
         id: FoodId,
-        name: FoodName,
-        price: FoodPrice,
+        Name: FoodName,
+        Price: FoodPrice,
         Description: FoodDescription,
         isActive: foodIsActive,
         ImagePath: selectedImage,
-        priority:0,
+        Priority: 0,
       });
 
       // Retrieve the auto-generated document ID
       const newDocumentId = docRef.id;
+      console.log("ID: ", newDocumentId);
 
-      // Reset the form fields
-      resetForm();
 
-      setLoading(false);
-      setError('');
+      setisUploading(false);
+      setErrorMessage('');
+      completed = true;
+
       // setSuccess(`Data uploaded successfully! Document ID: ${newDocumentId}`);
     } catch (error) {
       console.error('Error uploading data:', error);
-      setError('Error uploading data. Please try again.');
-      setLoading(false);
+      setErrorMessage('Error uploading data. Please try again.');
+      setisUploading(false);
+      completed = false;
     }
-
+    return completed;
   };
-
 
   const handleUploadFoodItem = async () => {
+    let imageUploaded = false;
+    let dataUploaded = false;
+  
     if (isFormFilled) {
+      setisUploading(true);
+  
       try {
-        setisUploading(true);
-
-        const imageUploadPromise = UploadImage();
-        const dataUploadPromise = UploadFoodItemData();
-
-        await Promise.all([imageUploadPromise, dataUploadPromise]);
-
-        setisUploading(false);
-        alert("Successfully uploaded Food ITEM");
+        dataUploaded = await UploadFoodItemData();
+  
+        if (dataUploaded) {
+          imageUploaded = await UploadImage();
+        }
+  
+        if (!dataUploaded || !imageUploaded) {
+          if (dataUploaded && !imageUploaded) {
+            const foodRef = collection(db, selectedCategory);
+            const querySnapshot = await getDocs(query(foodRef, where('Name', '==', FoodName)));
+  
+            if (!querySnapshot.empty) {
+              const docId = querySnapshot.docs[0].id;
+              await deleteDoc(doc(foodRef, docId));
+            }
+            setErrorMessage('Image upload failed.');
+          }
+          setisUploading(false);
+          return;
+        }
+  
+        alert('Successfully uploaded Food ITEM');
       } catch (error) {
         console.log('Error uploading:', error);
-
-        setErrorMessage("Error uploading:");
-        setisUploading(false);
-
-        // If an error occurs, delete the uploaded image from storage if it exists
-        if (selectedImage) {
-          const filename = `Images/${selectedCategory}/${FoodName}`;
-          const storageRef = ref(storage, filename);
-          await deleteObject(storageRef);
-        }
-
-        // Rollback the data upload if the image was uploaded successfully
-        if (error.message === 'Image upload failed.') {
-          // Delete the data that was uploaded
-          const foodRef = firebase.firestore().collection(selectedCategory);
-          const querySnapshot = await foodRef.where('name', '==', FoodName).get();
-          if (!querySnapshot.empty) {
-            const docId = querySnapshot.docs[0].id;
-            await foodRef.doc(docId).delete();
-          }
-        }
+        setErrorMessage('Error uploading. Please try again.');
       }
+  
+      setisUploading(false);
     }
   };
+  
 
 
 
