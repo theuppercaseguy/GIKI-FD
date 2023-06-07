@@ -1,11 +1,10 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, Image, StyleSheet, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
-
 import { fbauth, auth, db, storage } from '../firebaseauth';
 import { ref, uploadBytesResumable } from 'firebase/storage';
-
 import * as ImagePicker from 'expo-image-picker';
+
 
 const AdminScreen = () => {
   const navigation = useNavigation();
@@ -24,8 +23,22 @@ const AdminScreen = () => {
   const categories = ['KFC', 'McDonalds', 'DD', 'Layers'];
   const [dropdownVisible, setDropdownVisible] = useState(false); // State to toggle dropdown visibility
   const [selectedImage, setSelectedImage] = useState(null);
-  const [Uploading, setUploading] = useState(false);
 
+  const [isUploading, setisUploading] = useState(false);
+  const [isFormFilled, setIsFormFilled] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const checkFormValidity = () => {
+    if (FoodName && FoodPrice && FoodId && foodIsActive && selectedCategory && selectedImage) {
+      setIsFormFilled(true);
+    } else {
+      setIsFormFilled(false);
+    }
+  };
+
+  useEffect(() => {
+    checkFormValidity();
+  }, [FoodName, FoodPrice, FoodId, foodIsActive, selectedCategory, selectedImage]);
 
   const handleFoodIsActiveChange = (value) => {
     setFoodIsActive(value);
@@ -51,28 +64,6 @@ const AdminScreen = () => {
       .catch(error => alert(error.message));
   };
 
-
-
-  // const handleImageUpload = async () => {
-  //   try {
-  //     const result = await ImagePicker.launchImageLibraryAsync({
-  //       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-  //       allowsEditing: true,
-  //       aspect: [1, 1],
-  //       quality: 1,
-  //     });
-
-  //     if (!result.cancelled) {
-  //       setSelectedImage(result.uri);
-  //     } else {
-  //       console.log('Image selection cancelled');
-  //     }
-  //   } catch (error) {
-  //     console.log('Error uploading image:', error);
-  //   }
-  // };
-
-
   const PickImage = async () => {
     try {
       let result = await ImagePicker.launchImageLibraryAsync({
@@ -94,12 +85,13 @@ const AdminScreen = () => {
   };
 
   const UploadImage = async () => {
-    setUploading(true);
+
+    // setisUploading(true);
     const response = await fetch(selectedImage.uri);
     const blob = await response.blob();
 
-    const sanitizedFoodName = FoodName.replace(/\s+/g, '-'); // Replace spaces with hyphen
-    const filename = `Images/${selectedCategory}/${sanitizedFoodName}`; // Include the original format of the picture in the filename
+    // const sanitizedFoodName = FoodName.replace(/\s+/g, '-'); // Replace spaces with hyphen
+    const filename = `Images/${selectedCategory}/${FoodName}`; // Include the original format of the picture in the filename
 
     // const storage = getStorage();
     const storageRef = ref(storage, filename);
@@ -111,25 +103,103 @@ const AdminScreen = () => {
 
       if (bytesTransferred < totalBytes) {
         throw new Error("Image size exceeds 2MB limit.");
-        
+        // setErrorMessage("Image size exceeds 2MB limit.");
       }
 
-      setUploading(false);
-      alert("Photo Uploaded.");
       setSelectedImage(null);
     } catch (error) {
       console.log("Error uploading image: ", error);
-      setUploading(false);
-      alert("Failed to upload photo.");
+      setErrorMessage("Failed to upload photo.");
     }
   };
 
 
-  const handleUploadFoodItem = () => {
-    console.log(FoodName, FoodPrice, FoodId, foodIsActive, selectedCategory, selectedImage);
-    UploadImage();
+  const UploadFoodItemData = async () => {
+    try {
+      setLoading(true);
+      // Check if the food name already exists
+      const foodRef = firebase.firestore().collection(selectedCategory);
+      const querySnapshot = await foodRef.where('Name', '==', FoodName).get();
+
+      console.log("name: ",querySnapshot);
+
+      if (!querySnapshot.empty) {
+        setError('An item with the same name already exists.');
+        setLoading(false);
+        return;
+      }
+
+      // Upload the data to Firestore
+      const docRef = await foodRef.add({
+        id: FoodId,
+        name: FoodName,
+        price: FoodPrice,
+        Description: FoodDescription,
+        isActive: foodIsActive,
+        ImagePath: selectedImage,
+        priority:0,
+      });
+
+      // Retrieve the auto-generated document ID
+      const newDocumentId = docRef.id;
+
+      // Reset the form fields
+      resetForm();
+
+      setLoading(false);
+      setError('');
+      // setSuccess(`Data uploaded successfully! Document ID: ${newDocumentId}`);
+    } catch (error) {
+      console.error('Error uploading data:', error);
+      setError('Error uploading data. Please try again.');
+      setLoading(false);
+    }
 
   };
+
+
+  const handleUploadFoodItem = async () => {
+    if (isFormFilled) {
+      try {
+        setisUploading(true);
+
+        const imageUploadPromise = UploadImage();
+        const dataUploadPromise = UploadFoodItemData();
+
+        await Promise.all([imageUploadPromise, dataUploadPromise]);
+
+        setisUploading(false);
+        alert("Successfully uploaded Food ITEM");
+      } catch (error) {
+        console.log('Error uploading:', error);
+
+        setErrorMessage("Error uploading:");
+        setisUploading(false);
+
+        // If an error occurs, delete the uploaded image from storage if it exists
+        if (selectedImage) {
+          const filename = `Images/${selectedCategory}/${FoodName}`;
+          const storageRef = ref(storage, filename);
+          await deleteObject(storageRef);
+        }
+
+        // Rollback the data upload if the image was uploaded successfully
+        if (error.message === 'Image upload failed.') {
+          // Delete the data that was uploaded
+          const foodRef = firebase.firestore().collection(selectedCategory);
+          const querySnapshot = await foodRef.where('name', '==', FoodName).get();
+          if (!querySnapshot.empty) {
+            const docId = querySnapshot.docs[0].id;
+            await foodRef.doc(docId).delete();
+          }
+        }
+      }
+    }
+  };
+
+
+
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -161,11 +231,12 @@ const AdminScreen = () => {
         <View style={styles.content}>
 
           <ScrollView style={styles.scrollContent}>
+
             <TouchableOpacity style={styles.uploadImageContainer} onPress={PickImage}>
               {selectedImage ? (
-                <Image source={{}} style={styles.uploadedImage} />
+                <Image source={{ uri: selectedImage.uri }} style={styles.uploadedImage} />
               ) : (
-                <Text style={styles.uploadImageText}>Upload Image...</Text>
+                <Text>Upload Image...</Text>
               )}
             </TouchableOpacity>
 
@@ -242,9 +313,20 @@ const AdminScreen = () => {
               </View>
             </Modal>
 
-            <TouchableOpacity style={styles.uploadButton} onPress={handleUploadFoodItem}>
-              <Text style={styles.uploadButtonText}>Upload</Text>
+            <TouchableOpacity
+              style={[styles.uploadButton, !isFormFilled || isUploading ? styles.disabledButton : null]}
+              onPress={handleUploadFoodItem}
+              disabled={!isFormFilled || isUploading}
+            >
+              <Text style={styles.uploadButtonText}>
+                {isUploading ? 'UpLoading...' : 'Upload'}
+              </Text>
             </TouchableOpacity>
+
+
+            {errorMessage ? <Text style={styles.errorMessage}>{errorMessage}</Text> : null}
+
+
           </ScrollView>
         </View>
       ) : (
@@ -329,8 +411,16 @@ const styles = StyleSheet.create({
     borderRadius: 5,
 
   },
+  errorMessage: {
+    color: 'red',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
   scrollContent: {
     paddingHorizontal: 20,
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
   },
   topBar: {
     paddingTop: 35,
@@ -428,10 +518,16 @@ const styles = StyleSheet.create({
     borderColor: 'gray',
     borderWidth: 1,
     borderRadius: 5,
-    height: 150,
+    // height: 150,
     marginBottom: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 10,
+  },
+  uploadedImage: {
+    width: '100%',
+    height: 200,
+    resizeMode: 'contain',
   },
   uploadButton: {
     backgroundColor: '#0782F9',

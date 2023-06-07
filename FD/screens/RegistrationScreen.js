@@ -9,6 +9,7 @@ const RegistrationScreen = () => {
   const [contactNo, setCellNo] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  
   const [showPopup, setShowPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
