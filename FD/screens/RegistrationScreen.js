@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native'
 import React, { useState } from 'react'
-import { Platform,Dimensions,KeyboardAvoidingView, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Platform,ScrollView, Dimensions, KeyboardAvoidingView, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { auth, fbauth, db } from '../firebaseauth'
 import { collection, doc, setDoc } from "firebase/firestore"
 
@@ -9,7 +9,7 @@ const RegistrationScreen = () => {
   const [contactNo, setCellNo] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  
+
   const [showPopup, setShowPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -81,57 +81,59 @@ const RegistrationScreen = () => {
   }
   return (
     <KeyboardAvoidingView style={styles.container} behavior="height">
-      {showPopup && (
-        <View style={styles.popupContainer}>
-          <Text style={styles.popupText}>{popupMessage}</Text>
-        </View>
-      )}
-      <View style={styles.inputContainer}>
-        <View style={styles.logoContainer}>
-          <Image source={require('../assets/LOGO.png')} style={styles.logo} />
-          <Text style={styles.title}>GIK-FD</Text>
-        </View>
-        <Image source={'./assets/LOGO.png'} />
-        <TextInput
-          placeholder="Name"
-          value={name}
-          onChangeText={text => setName(text)}
-          style={styles.input}
-        />
-        <TextInput
-          placeholder="Phone (03xxxxxxxxx)"
-          value={contactNo}
-          onChangeText={text => setCellNo(text)}
-          style={styles.input}
-          keyboardType="phone-pad"
-          autoCapitalize="none"
-        />
-        <TextInput
-          placeholder="Email"
-          value={email}
-          onChangeText={text => setEmail(text)}
-          style={styles.input}
-          autoCapitalize="none"
-        />
-        <TextInput
-          placeholder="Password"
-          value={password}
-          onChangeText={text => setPassword(text)}
-          style={styles.input}
-          secureTextEntry
-          autoCapitalize="none"
-        />
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity onPress={handleSignUp} style={[styles.button, styles.buttonOutline, isLoading && styles.disabledButton]} disabled={isLoading}>
+        <View style={styles.inputContainer}>
+          <View style={styles.logoContainer}>
+            <Image source={require('../assets/LOGO.png')} style={styles.logo} />
+            <Text style={styles.title}>GIK-FD</Text>
+          </View>
+          <Image source={'./assets/LOGO.png'} />
+          <TextInput
+            placeholder="Name"
+            value={name}
+            onChangeText={text => setName(text)}
+            style={styles.input}
+          />
+          <TextInput
+            placeholder="Phone (03xxxxxxxxx)"
+            value={contactNo}
+            onChangeText={text => setCellNo(text)}
+            style={styles.input}
+            keyboardType="phone-pad"
+            autoCapitalize="none"
+          />
+          <TextInput
+            placeholder="Email"
+            value={email}
+            onChangeText={text => setEmail(text)}
+            style={styles.input}
+            autoCapitalize="none"
+          />
+          <TextInput
+            placeholder="Password"
+            value={password}
+            onChangeText={text => setPassword(text)}
+            style={styles.input}
+            secureTextEntry
+            autoCapitalize="none"
+          />
+        </View>
+        {showPopup && (
+          <View style={styles.popupContainer}>
+            <Text style={styles.popupText}>{popupMessage}</Text>
+          </View>
+        )}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity onPress={handleSignUp} style={[styles.button, styles.buttonOutline, isLoading && styles.disabledButton]} disabled={isLoading}>
 
-          <Text style={styles.buttonOutlineText}>{isLoading ? 'Loading...' : 'Register'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleLogIn}>
-          <Text style={styles.registerLink}>Already have an account? Login</Text>
-        </TouchableOpacity>
-      </View>
+            <Text style={styles.buttonOutlineText}>{isLoading ? 'Loading...' : 'Register'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogIn}>
+            <Text style={styles.registerLink}>Already have an account? Login</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   )
 }
@@ -147,9 +149,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
+    padding: 20,
+    // paddingHorizontal:10,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   inputContainer: {
-    width: width * 0.8,
+    width: '100%',
   },
   input: {
     backgroundColor: 'white',
@@ -162,7 +171,7 @@ const styles = StyleSheet.create({
     width: width * 0.8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: height * 0.05,
+    // marginTop: height * 0.05,
   },
   button: {
     backgroundColor: '#0782F9',
@@ -203,17 +212,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   popupContainer: {
-    position: 'absolute',
-    top: height * 0.1,
-    left: 0,
-    right: 0,
-    zIndex: 4,
-    backgroundColor: 'red',
-    padding: 10,
+    // backgroundColor: 'red',
+    padding: 5,
+    margin: 5,
   },
   popupText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: 'red',
+    // fontWeight: 'bold',
     textAlign: 'center',
   },
   logoContainer: {

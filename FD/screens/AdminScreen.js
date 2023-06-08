@@ -103,7 +103,6 @@ const AdminScreen = () => {
   const handleCategorySelect = async (category) => {
     setSelectedCategory(category);
     setDropdownVisible(false);
-    setSuccessMessage(null);
     try {
       // Fetch food items for the selected category
       await fetchFoodItems(category);
@@ -195,7 +194,7 @@ const AdminScreen = () => {
       const docRef = await addDoc(foodRef, {
         id: FoodId,
         Name: FoodName,
-        Price: FoodPrice,
+        Price: Number(FoodPrice),
         Description: FoodDescription,
         isActive: Boolean(foodIsActive),
         ImagePath: selectedImage,

@@ -1,15 +1,15 @@
 import { useNavigation } from '@react-navigation/native';
-import React, { createContext,useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { SafeAreaView, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Timestamp, collection, getDocs, query, where } from 'firebase/firestore';
-import { db, auth, fbauth,storage } from '../firebaseauth';
+import { db, auth, fbauth, storage } from '../firebaseauth';
 import { StatusBar } from 'expo-status-bar';
 import { CartContext } from './CartContext';
 import { getDownloadURL, ref } from 'firebase/storage';
 
 
 
-const UserScreen = ( {route } ) => {
+const UserScreen = ({ route }) => {
   const navigation = useNavigation();
   const { cartItems, updateCartItems } = useContext(CartContext);
 
@@ -17,19 +17,20 @@ const UserScreen = ( {route } ) => {
   const [foodItems, setFoodItems] = useState([]);
   const [loading, setLoading] = useState(true);
   // const [cartItems, setCartItems] = useState([]);
- 
+
   const clearCartItems = () => {
     updateCartItems([]);
   };
 
   useEffect(() => {
     // Fetch food items based on the selected restaurant
-    fetchFoodItems(selectedRestaurant); 
+    fetchFoodItems(selectedRestaurant);
   }, [selectedRestaurant]);
 
-  const handleRestaurantSelection = (restaurant) => {
+  const handleRestaurantSelection = async (restaurant) => {
     setSelectedRestaurant(restaurant);
     setFoodItems([]);
+    await fetchFoodItems();
   };
 
   const handleGoToCart = () => {
@@ -58,36 +59,38 @@ const UserScreen = ( {route } ) => {
         navigation.replace('LoginScreen');
       })
       .catch(error => alert(error.message));
-      clearCartItems();
-    };
+    clearCartItems();
+  };
 
-    const fetchFoodItems = async (restaurant) => {
-      try {
-        setLoading(true);
-        const foodItemsQuery = query(
-          collection(db, restaurant),
-          where('isActive', '==', true)
-        );
-        const querySnapshot = await getDocs(foodItemsQuery);
-    
-        const itemss = [];
-        for (const doc of querySnapshot.docs) {
-          const item = doc.data();
-          const storageRef = ref(storage, `Images/${restaurant}/${item.Name}`);
-          const downloadURL = await getDownloadURL(storageRef);
-          item.ImagePath = downloadURL;
-          
-          itemss.push(item);
-        }
-    
-        setFoodItems(itemss);
-        setLoading(false);
+  const fetchFoodItems = async (restaurant) => {
+    try {
+      setLoading(true);
+      const foodItemsQuery = query(
+        collection(db, restaurant),
+        where('isActive', '==', true)
+      );
+      const querySnapshot = await getDocs(foodItemsQuery);
 
-      } catch (error) {
-        console.log('Error fetching food items:', error);
-        setLoading(false);
+      const itemss = [];
+      for (const doc of querySnapshot.docs) {
+        const item = doc.data();
+        const storageRef = ref(storage, `Images/${restaurant}/${item.Name}`);
+        const downloadURL = await getDownloadURL(storageRef);
+        item.ImagePath = downloadURL;
+
+        itemss.push(item);
       }
-    };
+      console.log("items: ", restaurant);
+      console.log("items: ", itemss);
+
+      setFoodItems(itemss);
+      setLoading(false);
+
+    } catch (error) {
+      console.log('Error fetching food items:', error);
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -139,8 +142,8 @@ const UserScreen = ( {route } ) => {
             styles.restaurantButton,
             selectedRestaurant === "Layer's" && styles.selectedRestaurantButton,
           ]}
-          onPress={() => handleRestaurantSelection("Layer's")}
-          disabled={selectedRestaurant === "Layer's"}
+          onPress={() => handleRestaurantSelection("Layers")}
+          disabled={selectedRestaurant === "Layers"}
         >
           <Text style={styles.restaurantButtonText}>Layers</Text>
         </TouchableOpacity>
@@ -155,32 +158,32 @@ const UserScreen = ( {route } ) => {
             <Text>No items yet</Text>
           ) : (
             foodItems
-            .sort((a,b) => b.Priority-a.Priority)
-            .map((item) => (
-              <View key={item.id} style={styles.foodItem}>
+              .sort((a, b) => b.Priority - a.Priority)
+              .map((item) => (
+                <View key={item.id} style={styles.foodItem}>
 
-                <ImageBackground
-                  source={{ uri: item.ImagePath }}
-                  style={styles.foodImage}
-                >
-                  <View style={styles.foodImageOverlay}></View>
-                </ImageBackground>
-                <View style={styles.foodItemInfo}>
-                  <Text style={styles.foodItemName}>{item.Name}</Text>
-                  <Text style={styles.foodItemPrice}>Rs: {item.Price}/-</Text>
+                  <ImageBackground
+                    source={{ uri: item.ImagePath }}
+                    style={styles.foodImage}
+                  >
+                    <View style={styles.foodImageOverlay}></View>
+                  </ImageBackground>
+                  <View style={styles.foodItemInfo}>
+                    <Text style={styles.foodItemName}>{item.Name}</Text>
+                    <Text style={styles.foodItemPrice}>Rs: {item.Price}/-</Text>
+                  </View>
+                  <View style={styles.taxContainer}>
+                    <Text style={styles.taxText}>Including TAX</Text>
+                  </View>
+                  <Text style={styles.foodItemDescription}>{item.Description}</Text>
+                  <TouchableOpacity
+                    style={styles.addToCartButton}
+                    onPress={() => handleAddToCart(item)}
+                  >
+                    <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.taxContainer}>
-                  <Text style={styles.taxText}>Including TAX</Text>
-                </View>
-                <Text style={styles.foodItemDescription}>{item.Description}</Text>
-                <TouchableOpacity
-                  style={styles.addToCartButton}
-                  onPress={() => handleAddToCart(item)}
-                >
-                  <Text style={styles.addToCartButtonText}>Add to Cart</Text>
-                </TouchableOpacity>
-              </View>
-            ))
+              ))
           )}
         </View>
       </ScrollView>
