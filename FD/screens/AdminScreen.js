@@ -1,8 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
-import { ScrollView, Image, StyleSheet, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Image, KeyboardAvoidingView, StyleSheet, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { fbauth, auth, db, storage } from '../firebaseauth';
-import { getDownloadURL, ref , uploadBytesResumable, deleteObject } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
 import { collection, getDocs, doc, deleteDoc, addDoc, query, where } from 'firebase/firestore';
 
 import * as ImagePicker from 'expo-image-picker';
@@ -242,8 +242,22 @@ const AdminScreen = () => {
 
   // food editing 
   const [isEditing, setIsEditing] = useState(false);
-  const [editedFields, setEditedFields] = useState({});
+
+  const [editedFields, setEditedFields] = useState({
+    Name: '',
+    Description: '',
+    Price: '',
+    id: 0, // Provide an initial value of type number for id
+    isActive: true, // Provide an initial value of type boolean for isActive
+    ImagePath: '',
+    Priority: 1,
+  });
+
+  const [selectedItem, setSelectedItem] = useState(null);
   const [isDeleting, setisDeleting] = useState(false); // State to keep track of active tab
+  const [isSaving, setisSaving] = useState(false); // State to keep track of active tab
+  const [editedItem, setEditedItem] = useState({ ...FoodItems });
+  const [onCancel, setonCancel] = useState();
 
   const handleDeleteFooditem = async (name) => {
     let completed = false;
@@ -288,26 +302,39 @@ const AdminScreen = () => {
   }
 
 
-  const handleEdit = () => {
-    setEditedFields({
-      Name: item.name,
-      Description: item.description,
-      Price: item.price,
-      id: item.id,
-      isActive: item.isActive,
-    });
+  const handleEdit = (item) => {
+    console.log("edit pressed");
+
+    setSelectedItem(item);
     setIsEditing(true);
+    setEditedFields({
+      Name: item.Name,
+      Description: item.Description,
+      Price: item.Price,
+      isActive: item.isActive,
+      ImagePath: item.ImagePath,
+      Priority: item.Priority,
+      id: item.id,
+    });
+
   };
 
   const handleSave = () => {
     // Save the edited fields
     // Replace the item with the updated fields
     // Save the updated foodItems array
-    setIsEditing(false);
+    // setIsEditing(false);
+    onSave(editedFields);
   };
 
-  // Filter the food items based on the selected category
+  const handleChangeField = (fieldName, value) => {
+    setEditedFields((prevFields) => ({
+      ...prevFields,
+      [fieldName]: value,
+    }));
+    console.log("Handle change: ", editedFields);
 
+  };
 
 
   return (
@@ -496,49 +523,76 @@ const AdminScreen = () => {
                       <View key={FoodItem.Name} style={styles.foodItemContainer}>
 
                         {/* Render food item details */}
-                        {isEditing ? (
-                          <View>
-                            <TextInput
-                              style={styles.input}
-                              placeholder="Food Name"
-                              onChangeText={(text) => setEditedFields({ ...editedFields, name: text })}
-                              value={editedFields.name}
-                            />
-                            <TextInput
-                              style={styles.input}
-                              placeholder="Description"
-                              onChangeText={(text) => setEditedFields({ ...editedFields, description: text })}
-                              value={editedFields.description}
-                            />
-                            <TextInput
-                              style={styles.input}
-                              placeholder="Price"
-                              onChangeText={(text) => setEditedFields({ ...editedFields, price: text })}
-                              value={editedFields.price}
-                              keyboardType="numeric"
-                            />
-                            <TextInput
-                              style={styles.input}
-                              placeholder="Unique ID"
-                              onChangeText={(text) => setEditedFields({ ...editedFields, id: text })}
-                              value={editedFields.id}
-                            />
-                            <TouchableOpacity
-                              style={styles.dropdownContainer}
-                              onPress={() => setEditedFields({ ...editedFields, isActive: !editedFields.isActive })}
-                            >
-                              <Text>{editedFields.isActive ? 'Active' : 'Inactive'}</Text>
-                            </TouchableOpacity>
+                        {isEditing && selectedItem && (
+                          <Modal visible={isEditing} animationType="slide" transparent={true} style={styles.EDITFIContainer}>
+                            <KeyboardAvoidingView style={styles.modalContainer} behavior={Platform.OS === 'ios' ? 'padding' : null}>
+                              <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
 
-                            <TouchableOpacity
-                              style={styles.saveButton}
-                              onPress={handleSave}
-                              disabled={isSaving}
-                            >
-                              <Text style={styles.saveButtonText}>Save</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ) : (
+                                {FoodItem.ImagePath ? (
+                                  <Image source={{ uri: editedFields.ImagePath }} style={styles.foodItemImage} />
+                                ) : (
+                                  <View style={styles.emptyFoodItemImage}>
+                                    <Text style={styles.emptyFoodItemImageText}>No Image</Text>
+                                  </View>
+                                )}
+                                <Text style={styles.modalTitle}>Edit Food Item</Text>
+                                <Text style={styles.label}>Name:</Text>
+                                <TextInput
+                                  style={styles.input}
+                                  placeholder="Food Name"
+                                  onChangeText={(text) => handleChangeField('Name', text)}
+                                  value={editedFields.Name}
+                                />
+                                <Text style={styles.label}>Price:</Text>
+                                <TextInput
+                                  style={styles.input}
+                                  placeholder="Price"
+                                  onChangeText={(text) => handleChangeField('Price', text)}
+                                  value={editedFields.Price}
+                                  keyboardType="numeric"
+                                />
+                                <Text style={styles.label}>ID:</Text>
+                                <TextInput
+                                  style={styles.input}
+                                  placeholder="ID"
+                                  onChangeText={(text) => handleChangeField('id', text)}
+                                  value={editedFields.id}
+                                  keyboardType="numeric"
+                                />
+                                <Text style={styles.label}>Discription:</Text>
+                                <TextInput
+                                  style={styles.input}
+                                  placeholder="Description"
+                                  onChangeText={(text) => handleChangeField('Description', text)}
+                                  value={editedFields.Description}
+                                />
+                                <Text style={styles.label}>Priority:</Text>
+                                <TextInput
+                                  style={styles.input}
+                                  placeholder="Priority"
+                                  onChangeText={(text) => handleChangeField('Priority', text)}
+                                  value={editedFields.Priority.toString()}
+                                />
+                                <Text style={styles.label}>isActive Status:</Text>
+                                <TextInput
+                                  style={styles.input}
+                                  placeholder="isActive"
+                                  onChangeText={(text) => handleChangeField('isActive', text)}
+                                  value={editedFields.isActive.toString()}
+                                />
+
+                                <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={isSaving}>
+                                  <Text style={styles.saveButtonText}>Save</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.cancelButton} onPress={() => setIsEditing(false)}>
+                                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                                </TouchableOpacity>
+                              </ScrollView>
+                            </KeyboardAvoidingView>
+                          </Modal>
+
+                        )}
+                        {!isEditing && (
                           <View>
                             {FoodItem.ImagePath ? (
                               <Image source={{ uri: FoodItem.ImagePath }} style={styles.foodItemImage} />
@@ -552,7 +606,7 @@ const AdminScreen = () => {
                                 {/* <Text >Name:</Text> */}
                                 <Text style={styles.foodItemName}>{FoodItem.Name}</Text>
                                 <Text >RS: </Text>
-                                <Text style={styles.foodItemPrice}>{FoodItem.Price}\-</Text>
+                                <Text style={styles.foodItemPrice}>{FoodItem.Price}/-</Text>
                               </View>
                               <Text style={styles.foodItemDescription}>{FoodItem.Description}</Text>
                               <View style={styles.foodItemRow}>
@@ -564,7 +618,7 @@ const AdminScreen = () => {
                               <View style={styles.foodItemRow}>
                                 <Text >Status: </Text>
                                 <Text style={styles.foodItemIsActive}>{FoodItem.isActive ? 'Active' : 'Inactive'}</Text>
-                                <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
+                                <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(FoodItem)}>
                                   <Text style={styles.editButtonText}>Edit</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
@@ -626,6 +680,13 @@ const AdminScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  EDITFIContainer: {
+    borderWidth: 2,
+    borderColor: "red",
+    width: "100%",
+  },
+
+
   categoryBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -647,6 +708,41 @@ const styles = StyleSheet.create({
   categoryButtonText: {
     color: '#000',
   },
+
+
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: "center",
+  },
+
+  saveButton: {
+    backgroundColor: 'green',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  cancelButton: {
+    backgroundColor: 'red',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+
+
 
 
   foodItemLabel: {
@@ -800,12 +896,25 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   modalContainer: {
-    flex: 1,
+    paddingTop: 40,
+    // flex:1,
+    flexDirection: "row",
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    // paddingBottom:25,
+    backgroundColor: '#fff',
+    paddingHorizontal: 10,
+    // borderWidth:20,
+    // width:"100%",
   },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    borderColor: "green",
+    borderWidth: 2,
+    // width: 400,
+  },
+
   signOutButton: {
     paddingVertical: 5,
     paddingHorizontal: 10,
@@ -885,12 +994,12 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   input: {
+    width: '100%',
     height: 40,
-    borderColor: '#ccc',
+    borderColor: 'gray',
     borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
     marginBottom: 10,
+    paddingHorizontal: 10,
   },
   uploadButton: {
     backgroundColor: 'blue',
