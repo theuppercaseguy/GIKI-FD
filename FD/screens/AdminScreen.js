@@ -50,6 +50,21 @@ const AdminScreen = () => {
     }
   };
 
+
+  useEffect(() => {
+    checkFormValidity();
+    fetchFoodItems(selectedCategory);
+  }, [FoodName, FoodPrice, FoodId, foodIsActive, selectedCategory, selectedImage]);
+
+  const handleFoodIsActiveChange = (value) => {
+    setFoodIsActive(value);
+    setIsModalVisible(false);
+  };
+
+  const toggleModal = () => {
+    setIsModalVisible(!isModalVisible);
+  };
+
   const fetchFoodItems = async (cat) => {
     setErrorMessage(null);
     console.log("cat: ", cat);
@@ -64,10 +79,7 @@ const AdminScreen = () => {
 
       const querySnapshot = await getDocs(foodItemsRef);
       // console.log("FI0: ",querySnapshot);
-
-
       const foodItemsretreived = [];
-
 
       for (const doc of querySnapshot.docs) {
         const item = doc.data();
@@ -88,24 +100,17 @@ const AdminScreen = () => {
     setIsLoading(false);
   };
 
-  useEffect(() => {
-    checkFormValidity();
-    fetchFoodItems(selectedCategory);
-  }, [FoodName, FoodPrice, FoodId, foodIsActive, selectedCategory, selectedImage]);
-
-  const handleFoodIsActiveChange = (value) => {
-    setFoodIsActive(value);
-    setIsModalVisible(false);
-  };
-
-  const toggleModal = () => {
-    setIsModalVisible(!isModalVisible);
-  };
-
-
-  const handleCategorySelect = (category) => {
+  const handleCategorySelect = async (category) => {
     setSelectedCategory(category);
     setDropdownVisible(false);
+    setSuccessMessage(null);
+    try {
+      // Fetch food items for the selected category
+      await fetchFoodItems(category);
+    } catch (error) {
+      console.log('Error fetching food items:', error);
+      setErrorMessage('Error fetching food items');
+    }
   };
 
   const handleSignOut = () => {
@@ -440,6 +445,7 @@ const AdminScreen = () => {
       });
       setselectedImageEdit(null);
       console.log(editedFields);
+      // setSuccessMessage(null);
     }
   };
 
