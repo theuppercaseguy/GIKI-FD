@@ -46,7 +46,7 @@ const UserScreen = ( {route } ) => {
     };
     // Add the new item to the cart
     updateCartItems((prevCartItems) => [...prevCartItems, newItem]);
-    console.log("Cart Items:\n\n", cartItems);
+    console.log("Added to Cart:\n\n");
   };
 
   const handleSignOut = () => {
@@ -75,16 +75,14 @@ const UserScreen = ( {route } ) => {
           const item = doc.data();
           const storageRef = ref(storage, `Images/${restaurant}/${item.Name}`);
           const downloadURL = await getDownloadURL(storageRef);
-          // console.log("url: ",downloadURL);
           item.ImagePath = downloadURL;
+          
           itemss.push(item);
-          // itemss.push(item);
-          console.log("itemss: ",itemss);
         }
     
         setFoodItems(itemss);
         setLoading(false);
-        // console.log(foodItems);
+
       } catch (error) {
         console.log('Error fetching food items:', error);
         setLoading(false);

@@ -2,8 +2,9 @@ import { useNavigation } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
 import { ScrollView, Image, StyleSheet, Modal, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { fbauth, auth, db, storage } from '../firebaseauth';
-import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
+import { getDownloadURL, ref , uploadBytesResumable, deleteObject } from 'firebase/storage';
 import { collection, getDocs, doc, deleteDoc, addDoc, query, where } from 'firebase/firestore';
+
 import * as ImagePicker from 'expo-image-picker';
 
 
@@ -33,8 +34,6 @@ const AdminScreen = () => {
   const [activeCatTab, setActiveCatTab] = useState('KFC'); // State to keep track of active tab
   const [FoodItems, setFoodItems] = useState([]); // State to keep track of active tab
 
-  let filteredFoodItems = [];
-
 
   const checkFormValidity = () => {
     if (FoodName && FoodPrice && FoodId && foodIsActive && selectedCategory && selectedImage) {
@@ -58,10 +57,17 @@ const AdminScreen = () => {
       // console.log("FI0: ",querySnapshot);
 
 
-      let foodItemsretreived = querySnapshot.docs.map((doc) => doc.data());
-      foodItemsretreived.forEach((item) => {
-        filteredFoodItems.push(item);
-      });
+      const foodItemsretreived = [];
+
+
+      for (const doc of querySnapshot.docs) {
+        const item = doc.data();
+        const storageRef = ref(storage, `Images/${selectedCategory}/${item.Name}`);
+        const downloadURL = await getDownloadURL(storageRef);
+        item.ImagePath = downloadURL;
+        // console.log("",item.ImagePath);
+        foodItemsretreived.push(item);
+      }
 
       setFoodItems(foodItemsretreived);
 
@@ -535,7 +541,7 @@ const AdminScreen = () => {
                         ) : (
                           <View>
                             {FoodItem.ImagePath ? (
-                              <Image source={{ uri: null }} style={styles.foodItemImage} />
+                              <Image source={{ uri: FoodItem.ImagePath }} style={styles.foodItemImage} />
                             ) : (
                               <View style={styles.emptyFoodItemImage}>
                                 <Text style={styles.emptyFoodItemImageText}>No Image</Text>
