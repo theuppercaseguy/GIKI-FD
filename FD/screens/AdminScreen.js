@@ -172,7 +172,7 @@ const AdminScreen = () => {
         Name: FoodName,
         Price: FoodPrice,
         Description: FoodDescription,
-        isActive: foodIsActive,
+        isActive: Boolean(foodIsActive),
         ImagePath: selectedImage,
         Priority: 0,
       });

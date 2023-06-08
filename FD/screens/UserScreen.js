@@ -2,9 +2,10 @@ import { useNavigation } from '@react-navigation/native';
 import React, { createContext,useContext, useEffect, useState } from 'react';
 import { SafeAreaView, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Timestamp, collection, getDocs, query, where } from 'firebase/firestore';
-import { db, auth, fbauth } from '../firebaseauth';
+import { db, auth, fbauth,storage } from '../firebaseauth';
 import { StatusBar } from 'expo-status-bar';
 import { CartContext } from './CartContext';
+import { getDownloadURL, ref } from 'firebase/storage';
 
 
 
@@ -28,6 +29,7 @@ const UserScreen = ( {route } ) => {
 
   const handleRestaurantSelection = (restaurant) => {
     setSelectedRestaurant(restaurant);
+    setFoodItems([]);
   };
 
   const handleGoToCart = () => {
@@ -59,22 +61,35 @@ const UserScreen = ( {route } ) => {
       clearCartItems();
     };
 
-  const fetchFoodItems = async (restaurant) => {
-    try {
-      setLoading(true);
-      const foodItemsQuery = query(
-        collection(db, restaurant),
-        where('isActive', '==', true)
-      );
-      const querySnapshot = await getDocs(foodItemsQuery);
-      const items = querySnapshot.docs.map((doc) => doc.data());
-      setFoodItems(items);
-
-      setLoading(false);
-    } catch (error) {
-      console.log('Error fetching food items:', error);
-    }
-  };
+    const fetchFoodItems = async (restaurant) => {
+      try {
+        setLoading(true);
+        const foodItemsQuery = query(
+          collection(db, restaurant),
+          where('isActive', '==', true)
+        );
+        const querySnapshot = await getDocs(foodItemsQuery);
+    
+        const itemss = [];
+        for (const doc of querySnapshot.docs) {
+          const item = doc.data();
+          const storageRef = ref(storage, `Images/${restaurant}/${item.Name}`);
+          const downloadURL = await getDownloadURL(storageRef);
+          // console.log("url: ",downloadURL);
+          item.ImagePath = downloadURL;
+          itemss.push(item);
+          // itemss.push(item);
+          console.log("itemss: ",itemss);
+        }
+    
+        setFoodItems(itemss);
+        setLoading(false);
+        // console.log(foodItems);
+      } catch (error) {
+        console.log('Error fetching food items:', error);
+        setLoading(false);
+      }
+    };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -141,7 +156,9 @@ const UserScreen = ( {route } ) => {
           ) : foodItems.length === 0 ? (
             <Text>No items yet</Text>
           ) : (
-            foodItems.map((item) => (
+            foodItems
+            .sort((a,b) => b.Priority-a.Priority)
+            .map((item) => (
               <View key={item.id} style={styles.foodItem}>
 
                 <ImageBackground
