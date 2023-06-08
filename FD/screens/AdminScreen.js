@@ -36,6 +36,7 @@ const AdminScreen = () => {
   const [isDeleting, setisDeleting] = useState(false); // State to keep track of active tab
   const [isSaving, setisSaving] = useState(false); // State to keep track of active tab
   const [isImageVisible, setIsImageVisible] = useState(false);
+  const [selectedDeleteFoodItemName, setSelectedDeleteFoodItemName] = useState('');
 
   // food editing 
   const [isEditing, setIsEditing] = useState(false);
@@ -274,6 +275,7 @@ const AdminScreen = () => {
     let completed = false;
     try {
       setisDeleting(true); // Set isDeleting to true
+      setSelectedDeleteFoodItemName(name);
       // Query for the document with the matching name
       const querySnapshot = await getDocs(
         query(collection(db, selectedCategory), where("Name", "==", name))
@@ -335,7 +337,7 @@ const AdminScreen = () => {
     try {
       setErrorMessage("");
       setisSaving(true);
-  
+
       const isDataChanged =
         editedFields.Name !== selectedItem.Name ||
         editedFields.Description !== selectedItem.Description ||
@@ -344,23 +346,23 @@ const AdminScreen = () => {
         (selectedImageEdit !== null && isImageVisible) ||
         editedFields.id !== selectedItem.id ||
         editedFields.Priority !== selectedItem.Priority;
-  
+
       if (!isDataChanged) {
         setIsEditing(false);
         console.log("\n\nNothing changed...\n\n");
         return;
       }
-  
+
       console.log("\n\nisDataChanged:\n", isDataChanged);
-  
+
       const foodRef = collection(db, selectedCategory);
       const querySnapshot = await getDocs(
         query(foodRef, where("Name", "==", selectedItem.Name))
       );
-  
+
       if (!querySnapshot.empty) {
         const docId = querySnapshot.docs[0].id;
-  
+
         // Check if the name has changed
         if (selectedItem.Name !== editedFields.Name) {
           // Rename the existing image in storage
@@ -372,19 +374,19 @@ const AdminScreen = () => {
             storage,
             `Images/${selectedCategory}/${editedFields.Name}`
           );
-  
+
           // Get the download URL of the existing image
           const existingImageUrl = await getDownloadURL(oldStorageRef);
-  
+
           // Fetch the existing image and upload it with the new name
           const response = await fetch(existingImageUrl);
           const blob = await response.blob();
           await uploadBytes(newStorageRef, blob);
-  
+
           // Delete the existing image
           await deleteObject(oldStorageRef);
         }
-  
+
         // Check if a new image has been selected
         if (selectedImageEdit && selectedImageEdit.uri) {
           // Upload the new image to storage
@@ -395,11 +397,11 @@ const AdminScreen = () => {
             `Images/${selectedCategory}/${editedFields.Name}`
           );
           await uploadBytes(newStorageRef, blob);
-  
+
           // Update the image path in the editedFields object
           editedFields.ImagePath = `Images/${selectedCategory}/${editedFields.Name}`;
         }
-  
+
         // Update the fields that have been edited
         const updatedFields = {
           Name: editedFields.Name,
@@ -410,15 +412,16 @@ const AdminScreen = () => {
           Priority: editedFields.Priority,
           ImagePath: editedFields.ImagePath || selectedItem.ImagePath,
         };
-  
+
         await updateDoc(doc(foodRef, docId), updatedFields);
-  
+
         setSuccessMessage("Food item updated successfully");
         setErrorMessage(null);
       } else {
         setErrorMessage("Food item not found");
         setSuccessMessage(null);
       }
+      await fetchFoodItems(selectedCategory);
     } catch (error) {
       console.log("Error saving food item:", error);
       setErrorMessage("Error saving food item. Please try again.");
@@ -439,7 +442,7 @@ const AdminScreen = () => {
       console.log(editedFields);
     }
   };
-  
+
 
 
 
@@ -711,7 +714,7 @@ const AdminScreen = () => {
                               <KeyboardAvoidingView style={styles.modalContainer} behavior={Platform.OS === 'ios' ? 'padding' : null}>
                                 <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
 
-                                  <TouchableOpacity onPress={toggleImage}>
+                                  <TouchableOpacity onPress={toggleImage} disabled={isSaving}>
                                     {!isImageVisible ? (
                                       <Image
                                         source={{ uri: editedFields.ImagePath }}
@@ -734,6 +737,7 @@ const AdminScreen = () => {
                                     placeholder="Food Name"
                                     onChangeText={(text) => handleChangeField('Name', text)}
                                     value={editedFields.Name}
+                                    disabled={isSaving}
                                   />
 
                                   <Text style={styles.label}>Price:</Text>
@@ -743,10 +747,12 @@ const AdminScreen = () => {
                                     onChangeText={(text) => handleChangeField('Price', text)}
                                     value={editedFields.Price}
                                     keyboardType="numeric"
+                                    disabled={isSaving}
                                   />
 
                                   <Text style={styles.label}>ID:</Text>
                                   <TextInput
+                                    disabled={isSaving}
                                     style={styles.input}
                                     placeholder="ID"
                                     onChangeText={(text) => handleChangeField('id', text)}
@@ -756,6 +762,7 @@ const AdminScreen = () => {
 
                                   <Text style={styles.label}>Discription:</Text>
                                   <TextInput
+                                    disabled={isSaving}
                                     style={styles.input}
                                     placeholder="Description"
                                     onChangeText={(text) => handleChangeField('Description', text)}
@@ -764,6 +771,7 @@ const AdminScreen = () => {
 
                                   <Text style={styles.label}>Priority:</Text>
                                   <TextInput
+                                    disabled={isSaving}
                                     style={styles.input}
                                     placeholder="Priority"
                                     onChangeText={(text) => handleChangeField('Priority', text)}
@@ -772,7 +780,7 @@ const AdminScreen = () => {
                                   />
 
                                   <Text style={styles.label}>isActive Status:</Text>
-                                  <View style={styles.container}>
+                                  <View style={styles.container} disabled={isSaving}>
                                     <View style={styles.buttonContainer}>
                                       <TouchableOpacity
                                         style={[styles.button, editedFields.isActive ? styles.activeButton : null]}
@@ -843,11 +851,11 @@ const AdminScreen = () => {
                                     onPress={() => handleDeleteFooditem(FoodItem.Name)}
                                     disabled={isDeleting} // Disable the delete button when isDeleting is true
                                   >
-                                    {isDeleting ? (
-                                      <Text style={styles.deleteButtonText}>Deleting...</Text>
-                                    ) : (
-                                      <Text style={styles.deleteButtonText}>Delete</Text>
-                                    )}
+                                    <Text style={styles.deleteButtonText}>
+                                      {isDeleting && FoodItem.Name === selectedDeleteFoodItemName
+                                        ? "Deleting..."
+                                        : "Delete"}
+                                    </Text>
                                   </TouchableOpacity>
                                 </View>
                               </View>
