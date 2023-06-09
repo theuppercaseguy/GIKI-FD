@@ -44,7 +44,9 @@ const UserScreen = ({ route }) => {
       id: item.id,
       Name: item.Name,
       Price: item.Price,
+      Category:selectedRestaurant,
     };
+    console.log(selectedRestaurant);
     // Add the new item to the cart
     updateCartItems((prevCartItems) => [...prevCartItems, newItem]);
     console.log("Added to Cart:\n\n");
@@ -91,7 +93,9 @@ const UserScreen = ({ route }) => {
       setLoading(false);
     }
   };
-
+  const handleViewOrders = () => {
+    navigation.navigate('ViewOrdersScreen'); // Replace 'ViewOrders' with the actual screen name for your "View Orders" screen
+  };
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar translucent backgroundColor='transparent' />
@@ -189,8 +193,10 @@ const UserScreen = ({ route }) => {
       </ScrollView>
 
 
-
       <View style={styles.bottomBar}>
+        <TouchableOpacity onPress={handleViewOrders} style={styles.viewOrdersButton}>
+          <Text style={styles.viewOrdersButtonText}>View Orders</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.cartButton} onPress={handleGoToCart}>
           <Text style={styles.cartButtonText}>Go to Cart</Text>
         </TouchableOpacity>
@@ -205,6 +211,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginTop: 25,
   },
+
   scrollViewContent: {
     flexGrow: 1,
     paddingVertical: 20,
@@ -215,7 +222,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
-    // height: 50,
+    height: 50,
   },
   topBar: {
     flexDirection: 'row',
@@ -311,24 +318,35 @@ const styles = StyleSheet.create({
 
 
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    height: 60,
-    backgroundColor: '#f5f5f5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cartButton: {
-    backgroundColor: '#0782F9',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: '#2C3E50',
+    borderTopRightRadius:5,
+    borderTopRightRadius:5,
+
+  },
+  viewOrdersButton: {
+    backgroundColor: '#999999',
+    padding: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  viewOrdersButtonText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  cartButton: {
+    backgroundColor: '#999999',
+    padding: 10,
+    borderRadius: 5,
   },
   cartButtonText: {
     color: 'white',
+    fontWeight: '700',
     fontSize: 16,
-    fontWeight: 'bold',
   },
   signOutButton: {
     backgroundColor: '#0782F9',

@@ -53,8 +53,11 @@ const AdminScreen = () => {
 
   useEffect(() => {
     checkFormValidity();
+  }, [FoodName, FoodPrice, FoodId, foodIsActive, selectedImage]);
+  
+  useEffect(() => {
     fetchFoodItems(selectedCategory);
-  }, [FoodName, FoodPrice, FoodId, foodIsActive, selectedCategory, selectedImage]);
+  },[selectedCategory,]);
 
   const handleFoodIsActiveChange = (value) => {
     setFoodIsActive(value);

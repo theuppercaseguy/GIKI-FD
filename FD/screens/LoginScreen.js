@@ -36,6 +36,8 @@ const LoginScreen = () => {
             console.log('User document does not exist');
           }
         } catch (error) {
+          setShowPopup(true);
+          setPopupMessage('Error Logging in, please Try again Later...');
           console.log('Error getting user document:', error);
         } finally {
           setIsLoading(false);
@@ -57,8 +59,8 @@ const LoginScreen = () => {
   const handleLogin = async () => {
     if (email === '' || password === '') {
       console.log("Error loging in\nemail and password left blank");
-      setShowPopup(true);
       setPopupMessage('Please fill in all fields.');
+      setShowPopup(true);
       setIsLoading(false);
       return;
     }

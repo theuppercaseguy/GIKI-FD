@@ -2,7 +2,8 @@ import { useNavigation } from '@react-navigation/native'
 import React, { useState } from 'react'
 import { Platform,ScrollView, Dimensions, KeyboardAvoidingView, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { auth, fbauth, db } from '../firebaseauth'
-import { collection, doc, setDoc } from "firebase/firestore"
+import { collection, doc,Up, setDoc } from "firebase/firestore"
+import { updateProfile} from "firebase/auth"
 
 const RegistrationScreen = () => {
   const [name, setName] = useState('')
@@ -49,7 +50,10 @@ const RegistrationScreen = () => {
     try {
       const userCredentials = await fbauth.createUserWithEmailAndPassword(auth, email, password);
       const user = userCredentials.user;
+      await updateProfile(auth.currentUser,{displayName:name});
 
+      console.log("Logged In user: ",user.displayName);
+      
       await setDoc(doc(db, 'users', user.uid), {
         name: name,
         phoneNo: contactNo,
