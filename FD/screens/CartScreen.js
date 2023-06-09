@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { SafeAreaView, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CartContext } from './CartContext';
 import { db, auth, fbauth, storage } from '../firebaseauth';
-import { Timestamp, collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { serverTimestamp, collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 
 const CartScreen = ({ route, navigation }) => {
   const { cartItems, updateCartItems } = useContext(CartContext);
@@ -109,7 +109,9 @@ const CartScreen = ({ route, navigation }) => {
           Email: email,
           TotalPrice: 0,
           isConfirmed: "Pending",
+          Time:serverTimestamp(),
           FoodItems: [],
+          
         };
 
         // Iterate over each food item in the mergedCartItemsList
