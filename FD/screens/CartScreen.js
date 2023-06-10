@@ -91,11 +91,13 @@ const CartScreen = ({ route, navigation }) => {
       // console.log(mergedCartItemsList);
 
       const { currentUser } = auth; // Get the current logged-in user
+      console.log("username1: ", currentUser);
       console.log("username: ", currentUser.displayName);
 
       const querySnapshot = await getDocs(
         query(collection(db, 'users'), where('name', '==', currentUser.displayName))
       );
+      console.log("snapsjot: ",querySnapshot);
       const phoneNo = querySnapshot.docs[0].get('phoneNo');
 
       if (currentUser) {
@@ -108,7 +110,7 @@ const CartScreen = ({ route, navigation }) => {
           PhoneNumber: phoneNo,
           Email: email,
           TotalPrice: 0,
-          isConfirmed: "Pending",
+          isConfirmed: "pending",
           Time:serverTimestamp(),
           FoodItems: [],
           
@@ -153,7 +155,6 @@ const CartScreen = ({ route, navigation }) => {
       setIsPlacingOrder(false); // Set the placing order state back to false
     }
   };
-
 
   const handleSignOut = () => {
     fbauth

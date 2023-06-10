@@ -5,8 +5,13 @@ import { fbauth, auth, db, storage } from '../firebaseauth';
 import { getDownloadURL, ref, uploadBytesResumable, uploadBytes, deleteObject, updateMetadata, move } from 'firebase/storage';
 import { collection, getDocs, updateDoc, doc, deleteDoc, addDoc, query, where } from 'firebase/firestore';
 
+import OrderDetailsTab from './OrderDetails';
+import PendingOrdersTab from './PendingDetails';
+
 import * as ImagePicker from 'expo-image-picker';
+
 const AdminScreen = () => {
+
   const navigation = useNavigation();
 
 
@@ -54,10 +59,10 @@ const AdminScreen = () => {
   useEffect(() => {
     checkFormValidity();
   }, [FoodName, FoodPrice, FoodId, foodIsActive, selectedImage]);
-  
+
   useEffect(() => {
     fetchFoodItems(selectedCategory);
-  },[selectedCategory,]);
+  }, [selectedCategory,]);
 
   const handleFoodIsActiveChange = (value) => {
     setFoodIsActive(value);
@@ -651,7 +656,7 @@ const AdminScreen = () => {
           </TouchableOpacity>
 
         </ScrollView>
-      ) : (
+      ) : activeTab === 'activeFoodItems' ? (
         <ScrollView style={styles.content}>
 
           {/* Render active food items */}
@@ -883,19 +888,9 @@ const AdminScreen = () => {
 
         </ScrollView >
 
-      )}
+      ) : null}
 
       <View style={styles.bottomBar}>
-
-        <TouchableOpacity
-          style={[
-            styles.bottomBarButton,
-            activeTab === 'ordered-Food' && styles.activeTabButton,
-          ]}
-          onPress={() => setActiveTab('ordered-Food')}
-        >
-          <Text style={styles.bottomBarButtonText}>Ordered Food</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={[
@@ -906,6 +901,25 @@ const AdminScreen = () => {
         >
           <Text style={styles.bottomBarButtonText}>Orders Details</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.bottomBarButton,
+            activeTab === 'Orders-Status' && styles.activeTabButton,
+          ]}
+          onPress={() => setActiveTab('Orders-Status')}
+        >
+          <Text style={styles.bottomBarButtonText}>Orders Status</Text>
+        </TouchableOpacity>
+
+
+      </View>
+      <View>
+        {activeTab === 'Order-details' ? (
+          <OrderDetailsTab />
+        ) : activeTab === 'Orders-Status' ? (
+          <PendingOrdersTab />
+        ) : null}
       </View>
 
     </View >
@@ -1292,6 +1306,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: '#f5f5f5',
     alignItems: 'center',
+    position: "absolute",
+    bottom: 0,
+    zIndex:2,
   },
   bottomBarButton: {
     flex: 1,

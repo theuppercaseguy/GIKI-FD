@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
-import { addDoc, collection, query, where,deleteDoc,Timestamp, getDocs } from 'firebase/firestore';
+import { addDoc, collection, query, where, deleteDoc, Timestamp, getDocs } from 'firebase/firestore';
 import { db, auth, fbauth, storage } from '../firebaseauth';
 
 import { CartContext } from './CartContext';
@@ -8,27 +8,33 @@ import { CartContext } from './CartContext';
 const ViewOrdersScreen = ({ navigation }) => {
   const [orders, setOrders] = useState([]);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [fetchingOrders, setfetchingOrders] = useState(true);
   const [deleteMessage, setDeleteMessage] = useState('');
+  const { cartItems, updateCartItems } = useContext(CartContext);
 
   const fetchOrders = async () => {
+    setfetchingOrders(true);
     const currentUser = auth.currentUser;
     if (currentUser) {
-      const { displayName } = currentUser;
-      console.log(displayName);
+      const { displayName, email } = currentUser;
+      console.log(displayName, email);
       try {
         const ordersQuery = query(
           collection(db, 'Orders'),
-          where('Name', '==', displayName)
+          where('Email', '==', email)
         );
         const querySnapshot = await getDocs(ordersQuery);
         const ordersData = querySnapshot.docs.map((doc) => doc.data());
+
+        console.log("orders data", ordersData);
         setOrders(ordersData);
 
-        console.log(ordersData);
+        console.log("orders data", ordersData);
       } catch (error) {
         console.error('Error fetching orders:', error);
       }
     }
+    setfetchingOrders(false);
   };
 
   useEffect(() => {
@@ -44,7 +50,7 @@ const ViewOrdersScreen = ({ navigation }) => {
         navigation.replace('LoginScreen');
       })
       .catch(error => alert(error.message));
-
+    updateCartItems([]);
   };
 
   const handleGoToCart = () => {
@@ -61,22 +67,22 @@ const ViewOrdersScreen = ({ navigation }) => {
   const handleDeleteOrder = (timestamp) => {
     setDeleteLoading(true);
     setDeleteMessage('Deleting...');
-  
+
     // Get the document reference based on the conditions
     const ordersRef = collection(db, 'Orders');
-  
+
     const queryRef = query(
       ordersRef,
       where('Name', '==', auth.currentUser.displayName),
       where('isConfirmed', '==', 'delivered'),
       where('Time', '==', timestamp)
     );
-  
+
     getDocs(queryRef)
       .then((querySnapshot) => {
         if (!querySnapshot.empty) {
           const docRef = querySnapshot.docs[0].ref;
-  
+
           // Delete the document
           deleteDoc(docRef)
             .then(() => {
@@ -101,7 +107,7 @@ const ViewOrdersScreen = ({ navigation }) => {
         console.log('Error retrieving order: ' + error.message);
       });
   };
-  
+
 
   return (
     <View style={styles.container}>
@@ -111,71 +117,82 @@ const ViewOrdersScreen = ({ navigation }) => {
       </View>
 
       <View style={{ flex: 1 }}>
-        <ScrollView style={styles.ordersContainer}>
-          {deleteMessage ? <Text>{deleteMessage}</Text> : null}
-          {orders.map((order, index) => {
-            if (order.isConfirmed === "delivered") {
-              return (
-                <View key={order.Name} style={styles.orderItem}>
-                  <View style={styles.orderheadingContainer}>
-                    <Text style={styles.orderHeading}>Past Order # {(index - orders.length) * -1}</Text>
-                    <Text style={styles.orderTimeContainer}>
-                      {order.Time.toDate().toLocaleDateString()} {'\n '}{order.Time.toDate().toLocaleTimeString()}
-                    </Text>
-                  </View>
-                  {order.FoodItems.map((foodItem, foodIndex) => (
-                    <View key={foodItem.category} style={styles.foodItem}>
-                      <Text style={styles.foodItemHeading}>Food Item # {foodIndex + 1}</Text>
-                      <View style={styles.foodItemDetails}>
-                        <Text>Name: {foodItem.name} x {foodItem.amount}</Text>
-                        <Text style={styles.individualPrice}>Price: {foodItem.price}/-</Text>
+        {fetchingOrders ? (
+          <Text style={styles.noOrdersContainer}>Fetching Placed Orders...</Text>
+        ) :
+
+          orders.length === 0 ? (
+            <View style={styles.noOrdersContainer}>
+              <Text style={styles.noOrdersText}>No orders have been placed yet.</Text>
+            </View>
+          ) : (
+            <ScrollView style={styles.ordersContainer}>
+              {deleteMessage ? <Text>{deleteMessage}</Text> : null}
+              {orders.map((order, index) => {
+                if (order.isConfirmed === "delivered") {
+                  return (
+                    <View key={order.Name} style={styles.orderItem}>
+                      <View style={styles.orderheadingContainer}>
+                        <Text style={styles.orderHeading}>Past Order # {(index - orders.length) * -1}</Text>
+                        <Text style={styles.orderTimeContainer}>
+                          {order.Time.toDate().toLocaleDateString()} {'\n '}{order.Time.toDate().toLocaleTimeString()}
+                        </Text>
+                      </View>
+                      {order.FoodItems.map((foodItem, foodIndex) => (
+                        <View key={foodItem.category} style={styles.foodItem}>
+                          <Text style={styles.foodItemHeading}>Food Item # {foodIndex + 1}</Text>
+                          <View style={styles.foodItemDetails}>
+                            <Text>Name: {foodItem.name} x {foodItem.amount}</Text>
+                            <Text style={styles.individualPrice}>Price: {foodItem.price}/-</Text>
+                          </View>
+                        </View>
+                      ))}
+                      <Button
+                        title={deleteLoading ? 'Deleting...' : 'Delete'}
+                        onPress={() => handleDeleteOrder(order.Time)}
+                        // style={styles.deleteButton}
+                        color={deleteLoading ? "#bf3a3a" : "#ff0000"}
+                      />
+
+                    </View>
+                  );
+                }
+
+                return (
+                  <View key={order.Name} style={styles.orderItem}>
+                    <View style={styles.orderheadingContainer}>
+                      <Text style={styles.orderHeading}>Order # {index + 1}</Text>
+                      <View style={styles.orderTimeContainer}>
+                        <Text style={styles.orderTimeText}>
+                          {order.Time.toDate().toLocaleDateString()} {'\n '}
+                          {order.Time.toDate().toLocaleTimeString()}
+                        </Text>
                       </View>
                     </View>
-                  ))}
-                  <Button
-                    title={deleteLoading ? 'Deleting...' : 'Delete'}
-                    onPress={() => handleDeleteOrder(order.Time)}
-                    // style={styles.deleteButton}
-                    color={deleteLoading ?  "#bf3a3a" : "#ff0000"}
-                  />
 
-                </View>
-              );
-            }
-
-            return (
-              <View key={order.Name} style={styles.orderItem}>
-                <View style={styles.orderheadingContainer}>
-                  <Text style={styles.orderHeading}>Order # {index + 1}</Text>
-                  <View style={styles.orderTimeContainer}>
-                    <Text style={styles.orderTimeText}>
-                      {order.Time.toDate().toLocaleDateString()} {'\n '}
-                      {order.Time.toDate().toLocaleTimeString()}
-                    </Text>
-                  </View>
-                </View>
-
-                {order.FoodItems.map((foodItem, foodIndex) => (
-                  <View key={foodItem.category} style={styles.foodItem}>
-                    <Text style={styles.foodItemHeading}>Food Item # {foodIndex + 1}</Text>
-                    <View style={styles.foodItemDetails}>
-                      <Text>Name: {foodItem.name} x {foodItem.amount}</Text>
-                      <Text style={styles.individualPrice}>Price: {foodItem.price}/-</Text>
+                    {order.FoodItems.map((foodItem, foodIndex) => (
+                      <View key={foodItem.category} style={styles.foodItem}>
+                        <Text style={styles.foodItemHeading}>Food Item # {foodIndex + 1}</Text>
+                        <View style={styles.foodItemDetails}>
+                          <Text>Name: {foodItem.name} x {foodItem.amount}</Text>
+                          <Text style={styles.individualPrice}>Price: {foodItem.price}/-</Text>
+                        </View>
+                      </View>
+                    ))}
+                    <View style={styles.orderSummary}>
+                      <View style={styles.orderStatusContainer}>
+                        <Text style={styles.orderStatusText}>Order Status: {order.isConfirmed}</Text>
+                      </View>
+                      <View style={styles.totalPriceContainer}>
+                        <Text style={styles.totalPriceText}>Total Price: {order.TotalPrice}</Text>
+                      </View>
                     </View>
                   </View>
-                ))}
-                <View style={styles.orderSummary}>
-                  <View style={styles.orderStatusContainer}>
-                    <Text style={styles.orderStatusText}>Order Status: {order.isConfirmed}</Text>
-                  </View>
-                  <View style={styles.totalPriceContainer}>
-                    <Text style={styles.totalPriceText}>Total Price: {order.TotalPrice}</Text>
-                  </View>
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
+                );
+              })}
+            </ScrollView>
+          )
+        }
 
         <View style={styles.bottomBar}>
           <Button style={styles.Buttons} title="Go to Cart" onPress={handleGoToCart} color="#999999" />
@@ -287,6 +304,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#2C3E50',
     padding: 16,
+    // position:"relative",
+    // bottom:0,
+  },
+  noOrdersContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  noOrdersText: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
