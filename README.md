@@ -88,6 +88,10 @@ Contributions are welcome! If you encounter any issues or have suggestions for i
 
 To test the admin side of the app, email me at `saadan06@gmail.com` with the subject: "Request for GIKI-FD admin privileges." If your email is already registered in the GIKI-FD database, you will be granted admin privileges.
 
+## APK Conversion
+
+i Havent been able or succesfull at converting this app into an apk file or an ios app file, so if anyones is able to, ill be much obliged.
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
