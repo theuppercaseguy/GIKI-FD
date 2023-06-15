@@ -1,4 +1,4 @@
-# My App
+# GIKI-FD
 
 Welcome to My App! This is a mobile application designed specifically for food delivery services at Ghulam Ishaq Khan Institute of Engineering Sciences and Technology (GIKI), located in Pakistan. The app is built using React Native and Expo, providing a seamless and interactive user experience.
 
